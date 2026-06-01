@@ -1,8 +1,10 @@
+using System.Text;
 using Dekori;
 using Dekori.Demo;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -13,16 +15,47 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 builder.Logging.AddFilter("Microsoft.Hosting", LogLevel.Warning);
 
-// Wire OpenTelemetry to the "Dekori" ActivitySource and Meter and export everything to the console.
+string? grafanaUrl        = builder.Configuration["Grafana:Url"];
+string? grafanaInstanceId = builder.Configuration["Grafana:InstanceId"];
+string? grafanaApiToken   = builder.Configuration["Grafana:ApiToken"];
+bool    grafanaEnabled    = !string.IsNullOrEmpty(grafanaUrl)
+                         && !string.IsNullOrEmpty(grafanaInstanceId)
+                         && !string.IsNullOrEmpty(grafanaApiToken);
+
+void ConfigureGrafana(OtlpExporterOptions otlp)
+{
+    otlp.Endpoint = new Uri(grafanaUrl!);
+    otlp.Protocol = OtlpExportProtocol.HttpProtobuf;
+    string credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{grafanaInstanceId}:{grafanaApiToken}"));
+    otlp.Headers = $"Authorization=Basic {credentials}";
+}
+
+// Wire OpenTelemetry to the "Dekori" ActivitySource and Meter.
+// Console exporter always active; Grafana OTLP exporter active when secrets are present.
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("Dekori.Demo"))
-    .WithTracing(tracing => tracing
-        .AddSource("Dekori")
-        .AddConsoleExporter())
-    .WithMetrics(metrics => metrics
-        .AddMeter("Dekori")
-        .AddConsoleExporter((_, reader) =>
-            reader.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000));
+    .WithTracing(tracing =>
+    {
+        tracing.AddSource("Dekori").AddConsoleExporter();
+        if (grafanaEnabled)
+        {
+            tracing.AddOtlpExporter(ConfigureGrafana);
+        }
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics.AddMeter("Dekori").AddConsoleExporter((_, reader) =>
+            reader.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000);
+        if (grafanaEnabled)
+        {
+            metrics.AddOtlpExporter(ConfigureGrafana);
+        }
+    });
+
+if (grafanaEnabled)
+{
+    Console.WriteLine($"Grafana OTLP export enabled → {grafanaUrl}");
+}
 
 // Register Dekori and the instrumented services.
 builder.Services.AddDekori();
@@ -35,7 +68,7 @@ using var host = builder.Build();
 // ActivitySource/Meter — without this, nothing listens and no spans/metrics are exported.
 await host.StartAsync();
 
-var orders = host.Services.GetRequiredService<IOrderService>();
+var orders  = host.Services.GetRequiredService<IOrderService>();
 var widgets = host.Services.GetRequiredService<IRepository<Widget>>();
 
 Console.WriteLine("\n=== Dekori demo: instrumented calls ===\n");
