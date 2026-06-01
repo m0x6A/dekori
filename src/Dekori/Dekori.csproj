@@ -11,8 +11,29 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>Dekori</PackageId>
+    <Authors>Mattias Jonsson</Authors>
+    <Description>Attribute-driven OpenTelemetry instrumentation for .NET. Decorate services with [Trace], [Metric], [CaptureException] and [LogCall] to emit spans, metrics and logs automatically via Castle DynamicProxy — no manual ActivitySource/Meter plumbing in business code.</Description>
+    <PackageTags>opentelemetry;tracing;metrics;logging;instrumentation;aop;castle-proxy</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/mjonss/dekori</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="Dekori.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

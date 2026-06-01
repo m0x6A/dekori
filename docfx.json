@@ -1,0 +1,28 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": ["src/Dekori/Dekori.csproj"]
+        }
+      ],
+      "dest": "_api"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": ["_api/**.yml", "_api/index.md"]
+      },
+      {
+        "files": ["README.md"]
+      }
+    ],
+    "dest": "_site",
+    "globalMetadata": {
+      "_appTitle": "Dekori",
+      "_enableSearch": true,
+      "_appFooter": "Dekori – attribute-driven OpenTelemetry instrumentation for .NET"
+    }
+  }
+}
