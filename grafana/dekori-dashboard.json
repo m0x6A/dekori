@@ -1,0 +1,699 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_METRICS",
+      "label": "Metrics (Prometheus/Mimir)",
+      "description": "Prometheus-compatible datasource receiving Dekori OTel metrics via OTLP",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    },
+    {
+      "name": "DS_TRACES",
+      "label": "Traces (Tempo)",
+      "description": "Tempo datasource receiving Dekori OTel traces via OTLP",
+      "type": "datasource",
+      "pluginId": "tempo",
+      "pluginName": "Tempo"
+    },
+    {
+      "name": "DS_LOGS",
+      "label": "Logs (Loki)",
+      "description": "Loki datasource receiving Dekori structured logs",
+      "type": "datasource",
+      "pluginId": "loki",
+      "pluginName": "Loki"
+    }
+  ],
+  "__requires": [
+    { "type": "grafana",    "id": "grafana",    "name": "Grafana",    "version": "10.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0"  },
+    { "type": "datasource", "id": "tempo",      "name": "Tempo",      "version": "1.0.0"  },
+    { "type": "datasource", "id": "loki",       "name": "Loki",       "version": "1.0.0"  },
+    { "type": "panel", "id": "text",       "name": "Text",       "version": "" },
+    { "type": "panel", "id": "stat",       "name": "Stat",       "version": "" },
+    { "type": "panel", "id": "timeseries", "name": "Time series","version": "" },
+    { "type": "panel", "id": "table",      "name": "Table",      "version": "" },
+    { "type": "panel", "id": "traces",     "name": "Traces",     "version": "" },
+    { "type": "panel", "id": "logs",       "name": "Logs",       "version": "" }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Verifies that Dekori attribute-driven OTel instrumentation emits spans, metrics, and logs correctly. Import against a Grafana Cloud stack with Mimir + Tempo + Loki receiving OTLP.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["dekori", "opentelemetry", "dotnet"],
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Dekori — OTel Instrumentation",
+  "uid": "dekori-otel-v1",
+  "version": 1,
+
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Metrics",
+        "multi": false,
+        "name": "DS_METRICS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Traces",
+        "multi": false,
+        "name": "DS_TRACES",
+        "options": [],
+        "query": "tempo",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Logs",
+        "multi": false,
+        "name": "DS_LOGS",
+        "options": [],
+        "query": "loki",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": { "selected": false, "text": "Dekori.Demo", "value": "Dekori.Demo" },
+        "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+        "definition": "label_values(dekori_method_calls_total, service_name)",
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "label": "Service",
+        "multi": false,
+        "name": "service",
+        "options": [],
+        "query": {
+          "query": "label_values(dekori_method_calls_total, service_name)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+
+  "panels": [
+
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Signal Reference",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+      "options": {
+        "mode": "markdown",
+        "content": "**Metrics** (Prometheus labels: `service_name`, `code_function`, `code_namespace`, `error_type`)\n`dekori_method_calls_total` · `dekori_method_errors_total` · `dekori_method_duration_milliseconds_{bucket,sum,count}`\n\n**Traces** — ActivitySource `Dekori` · span attrs: `code.function`, `code.namespace`, `dekori.arg.*`, `dekori.return`\n\n**Logs** — category `Dekori.<TypeName>` · prefixes `Dekori →` (entry) `Dekori ←` (exit) `Dekori ✖` (error)"
+      }
+    },
+
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Method Calls",
+      "description": "Total instrumented method invocations in the selected time range.",
+      "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+      "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+          "unit": "short",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "sum(increase(dekori_method_calls_total{service_name=~\"$service\"}[$__range]))",
+          "instant": true,
+          "legendFormat": "Calls",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Errors",
+      "description": "Total exceptions recorded (CaptureException / failed spans) in the selected range.",
+      "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+      "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red",   "value": 1     }
+            ]
+          },
+          "unit": "short",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "sum(increase(dekori_method_errors_total{service_name=~\"$service\"}[$__range]))",
+          "instant": true,
+          "legendFormat": "Errors",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Error Rate",
+      "description": "Fraction of calls that raised an exception over the last rate interval.",
+      "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+      "gridPos": { "x": 12, "y": 3, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red",    "value": 0.05 }
+            ]
+          },
+          "unit": "percentunit",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "sum(rate(dekori_method_errors_total{service_name=~\"$service\"}[$__rate_interval])) / sum(rate(dekori_method_calls_total{service_name=~\"$service\"}[$__rate_interval]))",
+          "instant": true,
+          "legendFormat": "Error rate",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "P99 Latency",
+      "description": "99th-percentile method duration across all instrumented operations.",
+      "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+      "gridPos": { "x": 18, "y": 3, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null  },
+              { "color": "yellow", "value": 100   },
+              { "color": "red",    "value": 500   }
+            ]
+          },
+          "unit": "ms",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(dekori_method_duration_milliseconds_bucket{service_name=~\"$service\"}[$__rate_interval])))",
+          "instant": true,
+          "legendFormat": "P99",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Call Rate by Operation",
+      "description": "Calls per second for each instrumented method (dekori_method_calls_total).",
+      "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+      "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "reqps",
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "sum by (code_function) (rate(dekori_method_calls_total{service_name=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{code_function}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Error Rate by Operation",
+      "description": "Exceptions per second per method (dekori_method_errors_total). Labelled by error.type when CaptureException is used.",
+      "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+      "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "reqps",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red",   "value": 0    }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "sum by (code_function, error_type) (rate(dekori_method_errors_total{service_name=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{code_function}} — {{error_type}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Latency Percentiles (all operations)",
+      "description": "P50 / P95 / P99 of dekori_method_duration_milliseconds across all operations combined.",
+      "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+      "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "ms",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ms",
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(dekori_method_duration_milliseconds_bucket{service_name=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(dekori_method_duration_milliseconds_bucket{service_name=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "P95",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(dekori_method_duration_milliseconds_bucket{service_name=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "P99",
+          "refId": "C"
+        }
+      ]
+    },
+
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "P99 Latency by Operation",
+      "description": "99th-percentile duration per instrumented method.",
+      "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+      "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "ms",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ms",
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "histogram_quantile(0.99, sum by (le, code_function) (rate(dekori_method_duration_milliseconds_bucket{service_name=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "{{code_function}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Operations Summary",
+      "description": "Per-operation totals for the selected time range: call count, error count, and P99 latency. Uses instant queries merged on code_function.",
+      "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Calls" },
+            "properties": [{ "id": "unit", "value": "short" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Errors" },
+            "properties": [
+              { "id": "unit", "value": "short" },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "red",   "value": 1    }
+                  ]
+                }
+              },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "P99 (ms)" },
+            "properties": [
+              { "id": "unit", "value": "ms" },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green",  "value": null },
+                    { "color": "yellow", "value": 100  },
+                    { "color": "red",    "value": 500  }
+                  ]
+                }
+              },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Calls" }]
+      },
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "renameByName": {
+              "code_function": "Operation",
+              "Value #A": "Calls",
+              "Value #B": "Errors",
+              "Value #C": "P99 (ms)"
+            },
+            "indexByName": {
+              "code_function": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "sum by (code_function) (increase(dekori_method_calls_total{service_name=~\"$service\"}[$__range]))",
+          "instant": true,
+          "legendFormat": "{{code_function}}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "sum by (code_function) (increase(dekori_method_errors_total{service_name=~\"$service\"}[$__range]))",
+          "instant": true,
+          "legendFormat": "{{code_function}}",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_METRICS}" },
+          "expr": "histogram_quantile(0.99, sum by (le, code_function) (rate(dekori_method_duration_milliseconds_bucket{service_name=~\"$service\"}[$__rate_interval])))",
+          "instant": true,
+          "legendFormat": "{{code_function}}",
+          "refId": "C"
+        }
+      ]
+    },
+
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Traces",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 12,
+      "type": "traces",
+      "title": "Trace Search",
+      "description": "Searches the Dekori ActivitySource traces. Span attributes: code.function, code.namespace, dekori.arg.*, dekori.return. Error spans carry exception events (exception.type, exception.message, exception.stacktrace).",
+      "datasource": { "type": "tempo", "uid": "${DS_TRACES}" },
+      "gridPos": { "x": 0, "y": 32, "w": 24, "h": 14 },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogsSample": false,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "${DS_TRACES}" },
+          "filters": [],
+          "limit": 20,
+          "query": "{resource.service.name=~\"$service\"}",
+          "queryType": "traceql",
+          "refId": "A",
+          "tableType": "spans"
+        }
+      ]
+    },
+
+    {
+      "id": 13,
+      "type": "row",
+      "title": "Logs",
+      "collapsed": false,
+      "gridPos": { "x": 0, "y": 46, "w": 24, "h": 1 }
+    },
+
+    {
+      "id": 14,
+      "type": "logs",
+      "title": "Log Stream",
+      "description": "Entry logs: 'Dekori →'  Exit logs: 'Dekori ←'  Error logs: 'Dekori ✖' (LogError with exception). Logger category: Dekori.<TypeName>.",
+      "datasource": { "type": "loki", "uid": "${DS_LOGS}" },
+      "gridPos": { "x": 0, "y": 47, "w": 24, "h": 12 },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${DS_LOGS}" },
+          "expr": "{service_name=~\"$service\"} |= `Dekori`",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    }
+
+  ]
+}

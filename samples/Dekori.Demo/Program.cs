@@ -1,6 +1,7 @@
 using System.Text;
 using Dekori;
 using Dekori.Demo;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Configuration.AddUserSecrets<Program>(optional: true);
 
 // Quieten the framework noise so the Dekori signals stand out on the console.
 builder.Logging.SetMinimumLevel(LogLevel.Information);
@@ -31,12 +33,13 @@ void ConfigureGrafana(OtlpExporterOptions otlp)
 }
 
 // Wire OpenTelemetry to the "Dekori" ActivitySource and Meter.
-// Console exporter always active; Grafana OTLP exporter active when secrets are present.
+// Grafana OTLP exporter is active when secrets are present; the DemoDashboard provides
+// the in-process console summary instead of the verbose OTel console exporter.
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("Dekori.Demo"))
     .WithTracing(tracing =>
     {
-        tracing.AddSource("Dekori").AddConsoleExporter();
+        tracing.AddSource("Dekori");
         if (grafanaEnabled)
         {
             tracing.AddOtlpExporter(ConfigureGrafana);
@@ -44,8 +47,7 @@ builder.Services.AddOpenTelemetry()
     })
     .WithMetrics(metrics =>
     {
-        metrics.AddMeter("Dekori").AddConsoleExporter((_, reader) =>
-            reader.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000);
+        metrics.AddMeter("Dekori");
         if (grafanaEnabled)
         {
             metrics.AddOtlpExporter(ConfigureGrafana);
@@ -63,6 +65,9 @@ builder.Services.AddInstrumented<IOrderService, OrderService>();
 builder.Services.AddInstrumented<IRepository<Widget>, InMemoryRepository<Widget>>();
 
 using var host = builder.Build();
+
+// Dashboard is created before StartAsync so it registers its listeners before any calls are made.
+using var dashboard = new DemoDashboard();
 
 // Start the host so OpenTelemetry instantiates its providers and subscribes to the "Dekori"
 // ActivitySource/Meter — without this, nothing listens and no spans/metrics are exported.
@@ -95,6 +100,8 @@ catch (ArgumentOutOfRangeException ex)
     Console.WriteLine($"-> Caught (and still instrumented): {ex.Message}");
 }
 
-Console.WriteLine("\n=== Flushing telemetry... ===\n");
-await Task.Delay(1500); // let the periodic metric reader export at least once
+dashboard.Render();
+
+Console.WriteLine("=== Flushing telemetry... ===\n");
+await Task.Delay(1500); // allow Grafana OTLP export to drain before shutdown
 await host.StopAsync(); // flushes remaining spans/metrics on shutdown
