@@ -24,9 +24,10 @@ bool    grafanaEnabled    = !string.IsNullOrEmpty(grafanaUrl)
                          && !string.IsNullOrEmpty(grafanaInstanceId)
                          && !string.IsNullOrEmpty(grafanaApiToken);
 
-void ConfigureGrafana(OtlpExporterOptions otlp)
+void ConfigureGrafana(OtlpExporterOptions otlp, string signalPath)
 {
-    otlp.Endpoint = new Uri(grafanaUrl!);
+    string baseUrl = grafanaUrl!.TrimEnd('/');
+    otlp.Endpoint = new Uri($"{baseUrl}/{signalPath}");
     otlp.Protocol = OtlpExportProtocol.HttpProtobuf;
     string credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{grafanaInstanceId}:{grafanaApiToken}"));
     otlp.Headers = $"Authorization=Basic {credentials}";
@@ -42,7 +43,7 @@ builder.Services.AddOpenTelemetry()
         tracing.AddSource("Dekori");
         if (grafanaEnabled)
         {
-            tracing.AddOtlpExporter(ConfigureGrafana);
+            tracing.AddOtlpExporter(otlp => ConfigureGrafana(otlp, "v1/traces"));
         }
     })
     .WithMetrics(metrics =>
@@ -50,7 +51,7 @@ builder.Services.AddOpenTelemetry()
         metrics.AddMeter("Dekori");
         if (grafanaEnabled)
         {
-            metrics.AddOtlpExporter(ConfigureGrafana);
+            metrics.AddOtlpExporter(otlp => ConfigureGrafana(otlp, "v1/metrics"));
         }
     });
 
