@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/Dekori.Demo/Dekori.Demo.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Dekori/Dekori.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Dekori.Tests/Dekori.Tests.csproj" />
+  </Folder>
+</Solution>
