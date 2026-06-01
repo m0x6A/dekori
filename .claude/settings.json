@@ -1,16 +1,4 @@
 {
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "git rev-parse --git-dir >/dev/null 2>&1 && [ -n \"$(git status --porcelain)\" ] && git add -A && git commit -q -m \"chore: auto-commit on stop ($(date \"+%Y-%m-%dT%H:%M:%S%z\"))\" -m \"Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>\" >/dev/null 2>&1 || true",
-            "statusMessage": "Committing work...",
-            "timeout": 30
-          }
-        ]
-      }
-    ]
   }
 }
