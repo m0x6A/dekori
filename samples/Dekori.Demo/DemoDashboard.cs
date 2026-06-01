@@ -1,19 +1,23 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Microsoft.Extensions.Logging;
 
 namespace Dekori.Demo;
 
 /// <summary>
-/// Captures Dekori spans and metric measurements in-process via <see cref="ActivityListener"/> and
-/// <see cref="MeterListener"/>, then renders a formatted summary table to the console.
+/// Captures Dekori spans, metric measurements and log entries in-process, then renders a formatted
+/// summary table to the console. Implements <see cref="ILoggerProvider"/> so it can be registered
+/// with the host logging pipeline to intercept <c>Dekori.*</c> log categories.
 /// </summary>
-internal sealed class DemoDashboard : IDisposable
+internal sealed class DemoDashboard : ILoggerProvider
 {
     private sealed record SpanEntry(string Name, TimeSpan Duration, ActivityStatusCode Status, string? ExceptionType);
+    private sealed record LogEntry(string Category, LogLevel Level, string Message);
 
     private readonly List<SpanEntry> _spans = [];
     private readonly Dictionary<string, long> _counters = [];
     private readonly Dictionary<string, List<double>> _histograms = [];
+    private readonly List<LogEntry> _logEntries = [];
     private readonly ActivityListener _activityListener;
     private readonly MeterListener _meterListener;
     private readonly object _lock = new();
@@ -40,6 +44,42 @@ internal sealed class DemoDashboard : IDisposable
         _meterListener.SetMeasurementEventCallback<double>(OnDoubleMeasurement);
         _meterListener.Start();
     }
+
+    // ── ILoggerProvider ──────────────────────────────────────────────────────────────────────────
+
+    ILogger ILoggerProvider.CreateLogger(string categoryName) => new DekoriLogger(categoryName, this);
+
+    internal void CaptureLog(string category, LogLevel level, string message)
+    {
+        lock (_lock)
+        {
+            _logEntries.Add(new LogEntry(category, level, message));
+        }
+    }
+
+    private sealed class DekoriLogger(string category, DemoDashboard dashboard) : ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => logLevel != LogLevel.None;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == LogLevel.None || !category.StartsWith("Dekori.", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            string shortCategory = category["Dekori.".Length..];
+            dashboard.CaptureLog(shortCategory, logLevel, formatter(state, exception));
+        }
+    }
+
+    // ── Listeners ────────────────────────────────────────────────────────────────────────────────
 
     private void OnSpanStopped(Activity activity)
     {
@@ -104,20 +144,25 @@ internal sealed class DemoDashboard : IDisposable
         return $"{instrument}|";
     }
 
-    /// <summary>Renders the collected spans and metrics to the console.</summary>
+    // ── Render ───────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Renders the collected spans, metrics and logs to the console.</summary>
     public void Render()
     {
         List<SpanEntry> spans;
         List<(string Instrument, string Operation, string Value)> metricRows;
+        List<LogEntry> logEntries;
 
         lock (_lock)
         {
             spans = [.._spans];
             metricRows = BuildMetricRows();
+            logEntries = [.._logEntries];
         }
 
         RenderSpans(spans);
         RenderMetrics(metricRows);
+        RenderLogs(logEntries);
     }
 
     private List<(string, string, string)> BuildMetricRows()
@@ -153,8 +198,6 @@ internal sealed class DemoDashboard : IDisposable
         const int D = 9;   // duration
         const int S = 7;   // status
         const int E = 33;  // exception
-        // Each row: "│ " + N + " │ " + D + " │ " + S + " │ " + E + " │"
-        //         = 2 + N + 3 + D + 3 + S + 3 + E + 2 = N+D+S+E+13
         int width = N + D + S + E + 13;
 
         Console.WriteLine();
@@ -183,7 +226,6 @@ internal sealed class DemoDashboard : IDisposable
         const int I = 24;  // instrument
         const int O = 28;  // operation
         const int V = 36;  // value
-        // Each row: "│ " + I + " │ " + O + " │ " + V + " │" = I+O+V+10
         int width = I + O + V + 10;
 
         Console.WriteLine();
@@ -199,8 +241,47 @@ internal sealed class DemoDashboard : IDisposable
         }
 
         Console.WriteLine(TableRow3('└', '┴', '┘', I, O, V));
+    }
+
+    private static void RenderLogs(List<LogEntry> entries)
+    {
+        const int C = 22;  // category
+        const int L = 5;   // level label
+        const int M = 55;  // message
+        int width = C + L + M + 10;
+
+        Console.WriteLine();
+        Console.WriteLine(SectionTitle("LOGS", width));
+        Console.WriteLine(TableRow3('┌', '┬', '┐', C, L, M));
+        Console.WriteLine($"│ {"Category",-C} │ {"Level",-L} │ {"Message",-M} │");
+        Console.WriteLine(TableRow3('├', '┼', '┤', C, L, M));
+
+        foreach (LogEntry entry in entries)
+        {
+            string levelLabel = LevelLabel(entry.Level);
+            string levelPadded = $"{levelLabel,-L}";
+            string levelColored = entry.Level >= LogLevel.Error
+                ? $"\x1b[31m{levelPadded}\x1b[0m"
+                : entry.Level == LogLevel.Warning
+                    ? $"\x1b[33m{levelPadded}\x1b[0m"
+                    : levelPadded;
+            Console.WriteLine($"│ {Clip(entry.Category, C),-C} │ {levelColored} │ {Clip(entry.Message, M),-M} │");
+        }
+
+        Console.WriteLine(TableRow3('└', '┴', '┘', C, L, M));
         Console.WriteLine();
     }
+
+    private static string LevelLabel(LogLevel level) => level switch
+    {
+        LogLevel.Trace       => "TRACE",
+        LogLevel.Debug       => "DEBUG",
+        LogLevel.Information => "INFO",
+        LogLevel.Warning     => "WARN",
+        LogLevel.Error       => "ERROR",
+        LogLevel.Critical    => "CRIT",
+        _                    => "?",
+    };
 
     private static string SectionTitle(string title, int width)
     {

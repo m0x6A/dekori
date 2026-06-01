@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -33,10 +34,15 @@ void ConfigureGrafana(OtlpExporterOptions otlp, string signalPath)
     otlp.Headers = $"Authorization=Basic {credentials}";
 }
 
-// Wire OpenTelemetry to the "Dekori" ActivitySource and Meter.
-// Grafana OTLP exporter is active when secrets are present; the DemoDashboard provides
+// Dashboard is created before Build so it can be registered as a logger provider, and before
+// StartAsync so its ActivityListener/MeterListener are active before any calls are made.
+using var dashboard = new DemoDashboard();
+builder.Logging.AddProvider(dashboard);
+
+// Wire OpenTelemetry to the "Dekori" ActivitySource, Meter and log pipeline.
+// Grafana OTLP exporters are active when secrets are present; the DemoDashboard provides
 // the in-process console summary instead of the verbose OTel console exporter.
-builder.Services.AddOpenTelemetry()
+var otelBuilder = builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("Dekori.Demo"))
     .WithTracing(tracing =>
     {
@@ -57,6 +63,8 @@ builder.Services.AddOpenTelemetry()
 
 if (grafanaEnabled)
 {
+    otelBuilder.WithLogging(logging =>
+        logging.AddOtlpExporter(otlp => ConfigureGrafana(otlp, "v1/logs")));
     Console.WriteLine($"Grafana OTLP export enabled → {grafanaUrl}");
 }
 
@@ -66,9 +74,6 @@ builder.Services.AddInstrumented<IOrderService, OrderService>();
 builder.Services.AddInstrumented<IRepository<Widget>, InMemoryRepository<Widget>>();
 
 using var host = builder.Build();
-
-// Dashboard is created before StartAsync so it registers its listeners before any calls are made.
-using var dashboard = new DemoDashboard();
 
 // Start the host so OpenTelemetry instantiates its providers and subscribes to the "Dekori"
 // ActivitySource/Meter — without this, nothing listens and no spans/metrics are exported.
