@@ -3,9 +3,6 @@ using System.Diagnostics.Metrics;
 
 namespace Dekori.Tests.Support;
 
-/// <summary>A single metric measurement captured in-process by <see cref="TelemetryProbe"/>.</summary>
-public sealed record RecordedMetric(string Name, double Value, IReadOnlyDictionary<string, object?> Tags);
-
 /// <summary>
 /// Captures the <em>real</em> OpenTelemetry signals a test produces by attaching an
 /// <see cref="ActivityListener"/> and a <see cref="MeterListener"/> scoped to a single source/meter

@@ -2,21 +2,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Dekori.Demo;
 
-/// <summary>A plain payload type returned by the generic repository sample.</summary>
-public sealed class Widget
-{
-    public string Name { get; set; } = "demo-widget";
-
-    public override string ToString() => Name;
-}
-
-public interface IOrderService
-{
-    Task<string> PlaceOrderAsync(string sku, int quantity);
-
-    void Cancel(string orderId);
-}
-
 /// <summary>
 /// Class-level <c>[Instrument]</c> opts every method into trace + metrics + exception capture.
 /// <c>[LogCall]</c> layers structured entry/exit logging onto the async method.
@@ -41,18 +26,4 @@ public sealed class OrderService : IOrderService
     {
         // Only class-level instrumentation applies here (trace + metrics + exception capture).
     }
-}
-
-public interface IRepository<T>
-{
-    T GetById(int id);
-}
-
-/// <summary>Generic sample proving generic-class instrumentation works unchanged.</summary>
-public sealed class InMemoryRepository<T> : IRepository<T>
-    where T : new()
-{
-    [Trace]
-    [Metric]
-    public T GetById(int id) => new();
 }

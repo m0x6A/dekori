@@ -1,16 +1,4 @@
-using System.Diagnostics;
-using Microsoft.Extensions.Logging;
-
 namespace Dekori.Instrumentation;
-
-/// <summary>Trace behavior settings resolved for a method.</summary>
-internal sealed record TraceSettings(string SpanName, ActivityKind Kind, bool RecordArguments, bool RecordReturnValue);
-
-/// <summary>Metric behavior settings resolved for a method.</summary>
-internal sealed record MetricSettings(string BaseName, bool RecordDuration, bool RecordCount);
-
-/// <summary>Log behavior settings resolved for a method.</summary>
-internal sealed record LogSettings(LogLevel Level, bool LogArguments, bool LogResult);
 
 /// <summary>
 /// Immutable, per-method description of which telemetry behaviors apply and with what options.
