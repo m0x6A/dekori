@@ -64,3 +64,13 @@ Write tests first (TDD), expressed as behaviour specifications (BDD).
 
 `dotnet build` is clean (0 warnings), `dotnet test` is fully green, and — for behavioural changes —
 `dotnet run --project samples/Dekori.Demo` shows the expected spans/metrics/logs.
+
+## Mandatory critique
+
+**Every non-trivial change must be critiqued by the `csharp-critic` agent before it is considered
+done — no exceptions.** Do not assume your first approach is correct. After implementing a change
+(and before declaring it finished or proposing a commit), delegate the diff to `csharp-critic` and
+address its findings: fix every **Blocker**, fix or explicitly justify every **Should-fix**, and
+answer every **Question/assumption** it raises. The critic reviews best practices, maintainability,
+and performance, and challenges the assumed path forward. "Trivial" means typos, comments, or
+formatting only — anything touching behaviour, public surface, or the hot path is non-trivial.
