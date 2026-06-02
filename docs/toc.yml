@@ -1,0 +1,8 @@
+- name: Getting started
+  href: articles/getting-started.md
+- name: Attribute reference
+  href: articles/attributes.md
+- name: Configuration
+  href: articles/options.md
+- name: Advanced topics
+  href: articles/advanced.md

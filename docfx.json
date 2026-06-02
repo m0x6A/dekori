@@ -15,7 +15,10 @@
         "files": ["_api/**.yml", "_api/index.md"]
       },
       {
-        "files": ["README.md"]
+        "files": ["docs/**"]
+      },
+      {
+        "files": ["toc.yml"]
       }
     ],
     "dest": "_site",
