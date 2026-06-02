@@ -1,4 +1,4 @@
-name: Publish NuGet
+name: Publish
 
 on:
   release:
@@ -8,6 +8,8 @@ jobs:
   publish:
     name: Pack & Push
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -33,3 +35,6 @@ jobs:
 
       - name: Push to NuGet.org
         run: dotnet nuget push nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Push to GitHub Packages
+        run: dotnet nuget push nupkg/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source https://nuget.pkg.github.com/mjonss/index.json --skip-duplicate
