@@ -15,6 +15,14 @@ public sealed class DekoriOptions
     public string ActivitySourceName { get; set; } = "Dekori";
 
     /// <summary>
+    /// Additional <see cref="System.Diagnostics.ActivitySource"/> names that <c>[Trace(Source = ...)]</c>
+    /// methods emit from. These are pre-created at startup so they can be enumerated (see
+    /// <c>DekoriTelemetry.SourceNames</c>) and registered with an OpenTelemetry <c>AddSource(...)</c> call.
+    /// A source named in a <c>[Trace]</c> attribute but missing here is still created on first use.
+    /// </summary>
+    public IList<string> AdditionalActivitySourceNames { get; } = new List<string>();
+
+    /// <summary>
     /// Name of the <see cref="System.Diagnostics.Metrics.Meter"/> metrics are emitted from. This is
     /// the name an OpenTelemetry <c>AddMeter(...)</c> call must subscribe to. Defaults to <c>Dekori</c>.
     /// </summary>

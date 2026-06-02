@@ -13,11 +13,15 @@ public sealed class TestHost : IDisposable
     private readonly ServiceProvider _provider;
     private readonly RecordingLoggerProvider _loggerProvider = new();
 
-    public TestHost(Action<IServiceCollection> configure, Action<DekoriOptions>? configureOptions = null)
+    public TestHost(
+        Action<IServiceCollection> configure,
+        Action<DekoriOptions>? configureOptions = null,
+        IEnumerable<string>? additionalSources = null)
     {
         string id = Guid.NewGuid().ToString("N");
         SourceName = $"Dekori.Test.{id}";
         MeterName = $"Dekori.Test.{id}";
+        string[] extraSources = additionalSources?.ToArray() ?? Array.Empty<string>();
 
         var services = new ServiceCollection();
         services.AddLogging(builder =>
@@ -29,12 +33,17 @@ public sealed class TestHost : IDisposable
         {
             options.ActivitySourceName = SourceName;
             options.MeterName = MeterName;
+            foreach (string source in extraSources)
+            {
+                options.AdditionalActivitySourceNames.Add(source);
+            }
+
             configureOptions?.Invoke(options);
         });
         configure(services);
 
         _provider = services.BuildServiceProvider();
-        Probe = new TelemetryProbe(SourceName, MeterName);
+        Probe = new TelemetryProbe(MeterName, [SourceName, .. extraSources]);
     }
 
     public string SourceName { get; }

@@ -26,7 +26,7 @@ internal sealed class DemoDashboard : ILoggerProvider
     {
         _activityListener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == "Dekori",
+            ShouldListenTo = source => source.Name.StartsWith("Dekori", StringComparison.Ordinal),
             Sample = static (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = OnSpanStopped,
         };

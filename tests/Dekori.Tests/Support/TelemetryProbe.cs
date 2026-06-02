@@ -17,10 +17,16 @@ public sealed class TelemetryProbe : IDisposable
     private readonly Lock _gate = new();
 
     public TelemetryProbe(string sourceName, string meterName)
+        : this(meterName, new[] { sourceName })
     {
+    }
+
+    public TelemetryProbe(string meterName, params string[] sourceNames)
+    {
+        var sources = new HashSet<string>(sourceNames, StringComparer.Ordinal);
         _activityListener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == sourceName,
+            ShouldListenTo = source => sources.Contains(source.Name),
             Sample = static (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = activity =>
             {

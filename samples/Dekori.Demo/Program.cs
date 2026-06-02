@@ -46,7 +46,7 @@ var otelBuilder = builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("Dekori.Demo"))
     .WithTracing(tracing =>
     {
-        tracing.AddSource("Dekori");
+        tracing.AddSource("Dekori", "Dekori.Db");
         if (grafanaEnabled)
         {
             tracing.AddOtlpExporter(otlp => ConfigureGrafana(otlp, "v1/traces"));
@@ -68,8 +68,9 @@ if (grafanaEnabled)
     Console.WriteLine($"Grafana OTLP export enabled → {grafanaUrl}");
 }
 
-// Register Dekori and the instrumented services.
-builder.Services.AddDekori();
+// Register Dekori and the instrumented services. The extra "Dekori.Db" source is declared so it is
+// pre-created and enumerable; the repository's [Trace(Source = "Dekori.Db")] emits its spans there.
+builder.Services.AddDekori(options => options.AdditionalActivitySourceNames.Add("Dekori.Db"));
 builder.Services.AddInstrumented<IOrderService, OrderService>();
 builder.Services.AddInstrumented<IRepository<Widget>, InMemoryRepository<Widget>>();
 

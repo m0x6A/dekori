@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using Castle.DynamicProxy;
 using Microsoft.Extensions.Logging;
@@ -46,7 +47,11 @@ internal sealed class InstrumentationPlanCache
                 SpanName: string.IsNullOrWhiteSpace(traceAttr?.Name) ? operationName : traceAttr!.Name!,
                 Kind: traceAttr?.Kind ?? System.Diagnostics.ActivityKind.Internal,
                 RecordArguments: (traceAttr?.RecordArguments ?? false) || _options.CaptureArgumentsByDefault,
-                RecordReturnValue: (traceAttr?.RecordReturnValue ?? false) || _options.CaptureReturnValueByDefault)
+                RecordReturnValue: (traceAttr?.RecordReturnValue ?? false) || _options.CaptureReturnValueByDefault,
+                SourceName: string.IsNullOrWhiteSpace(traceAttr?.Source) ? _options.ActivitySourceName : traceAttr!.Source!,
+                NewRoot: traceAttr?.NewRoot ?? false,
+                ParentParameterIndex: FindParentParameter(method),
+                LinkParameterIndices: FindLinkParameters(method))
             : null;
 
         MetricSettings? metric = (metricAttr is not null || classOptIn)
@@ -78,4 +83,45 @@ internal sealed class InstrumentationPlanCache
     /// <summary>Method-level attribute wins; otherwise the class-level attribute applies.</summary>
     private static T? Resolve<T>(MethodInfo method, Type declaringType) where T : Attribute =>
         method.GetCustomAttribute<T>(inherit: true) ?? declaringType.GetCustomAttribute<T>(inherit: true);
+
+    /// <summary>Index of the first <c>[TraceParent]</c> parameter of a supported type, or -1 when none.</summary>
+    private static int FindParentParameter(MethodInfo method)
+    {
+        ParameterInfo[] parameters = method.GetParameters();
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            if (parameters[i].IsDefined(typeof(TraceParentAttribute), inherit: true) && IsSupportedParentType(parameters[i].ParameterType))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>Indices of <c>[TraceLink]</c> parameters of a supported type; empty when none.</summary>
+    private static IReadOnlyList<int> FindLinkParameters(MethodInfo method)
+    {
+        ParameterInfo[] parameters = method.GetParameters();
+        List<int>? indices = null;
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            if (parameters[i].IsDefined(typeof(TraceLinkAttribute), inherit: true) && IsSupportedLinkType(parameters[i].ParameterType))
+            {
+                indices ??= new List<int>();
+                indices.Add(i);
+            }
+        }
+
+        return indices ?? (IReadOnlyList<int>)Array.Empty<int>();
+    }
+
+    private static bool IsSupportedParentType(Type type) =>
+        type == typeof(ActivityContext) || type == typeof(Activity);
+
+    private static bool IsSupportedLinkType(Type type) =>
+        type == typeof(ActivityContext)
+        || type == typeof(ActivityLink)
+        || typeof(IEnumerable<ActivityContext>).IsAssignableFrom(type)
+        || typeof(IEnumerable<ActivityLink>).IsAssignableFrom(type);
 }
