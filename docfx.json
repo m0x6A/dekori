@@ -18,7 +18,7 @@
         "files": ["docs/**"]
       },
       {
-        "files": ["toc.yml"]
+        "files": ["index.md", "toc.yml"]
       }
     ],
     "dest": "_site",
