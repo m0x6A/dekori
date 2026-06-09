@@ -585,3 +585,13 @@ dotnet run --project samples/Dekori.Demo
 The test suite asserts against **real** in-process signals via `ActivityListener`/`MeterListener`,
 including that async spans cover the full awaited operation and that captured exceptions are
 rethrown.
+
+## AI agent skills
+
+This repository ships installable repository skills for both Claude and GitHub Copilot:
+
+- Claude: `.claude/skills/use-dekori/SKILL.md`
+- Copilot: `.github/copilot/skills/use-dekori/SKILL.md`
+
+They capture the repository layout, coding conventions, and validation flow for working on Dekori
+itself.
