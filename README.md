@@ -598,3 +598,15 @@ This repository ships two different skills:
 The Copilot skill is intentionally consumer-focused: it assumes Dekori is already referenced as a
 package and guides registration, attributes, and OpenTelemetry wiring instead of repository internals
 or demo files.
+
+### Install the Copilot consumer skill
+
+Open the skill file in GitHub and click **Install** to add it to your Copilot agent:
+
+👉 **[Install `use-dekori` Copilot skill](https://github.com/m0x6A/dekori/blob/main/.github/copilot/skills/use-dekori/SKILL.md)**
+
+Or point your Copilot skill manager at:
+
+```
+https://github.com/m0x6A/dekori/blob/main/.github/copilot/skills/use-dekori/SKILL.md
+```
