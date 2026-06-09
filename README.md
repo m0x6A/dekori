@@ -585,3 +585,28 @@ dotnet run --project samples/Dekori.Demo
 The test suite asserts against **real** in-process signals via `ActivityListener`/`MeterListener`,
 including that async spans cover the full awaited operation and that captured exceptions are
 rethrown.
+
+## AI agent skills
+
+This repository ships two different skills:
+
+- Claude: `.claude/skills/use-dekori/SKILL.md` — repository-maintainer guidance for working on
+  Dekori itself
+- Copilot: `.github/copilot/skills/use-dekori/SKILL.md` — an installable consumer skill for using
+  Dekori as a NuGet package in another .NET application
+
+The Copilot skill is intentionally consumer-focused: it assumes Dekori is already referenced as a
+package and guides registration, attributes, and OpenTelemetry wiring instead of repository internals
+or demo files.
+
+### Install the Copilot consumer skill
+
+Open the skill file in GitHub and click **Install** to add it to your Copilot agent:
+
+👉 **[Install `use-dekori` Copilot skill](https://github.com/m0x6A/dekori/blob/main/.github/copilot/skills/use-dekori/SKILL.md)**
+
+Or point your Copilot skill manager at:
+
+```
+https://github.com/m0x6A/dekori/blob/main/.github/copilot/skills/use-dekori/SKILL.md
+```
