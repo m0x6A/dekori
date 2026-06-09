@@ -588,10 +588,13 @@ rethrown.
 
 ## AI agent skills
 
-This repository ships installable repository skills for both Claude and GitHub Copilot:
+This repository ships two different skills:
 
-- Claude: `.claude/skills/use-dekori/SKILL.md`
-- Copilot: `.github/copilot/skills/use-dekori/SKILL.md`
+- Claude: `.claude/skills/use-dekori/SKILL.md` — repository-maintainer guidance for working on
+  Dekori itself
+- Copilot: `.github/copilot/skills/use-dekori/SKILL.md` — an installable consumer skill for using
+  Dekori as a NuGet package in another .NET application
 
-They capture the repository layout, coding conventions, and validation flow for working on Dekori
-itself.
+The Copilot skill is intentionally consumer-focused: it assumes Dekori is already referenced as a
+package and guides registration, attributes, and OpenTelemetry wiring instead of repository internals
+or demo files.

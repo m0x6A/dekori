@@ -1,43 +1,51 @@
 ---
 name: use-dekori
-description: Use Dekori's repository structure, conventions, and validation flow when working on the library, tests, demo, or docs.
+description: Use Dekori from a consumer .NET application installed via NuGet. Focus on registration, attributes, and OpenTelemetry wiring rather than Dekori's repository internals.
 applyTo:
-  - "src/Dekori/**/*.cs"
-  - "tests/Dekori.Tests/**/*.cs"
-  - "samples/Dekori.Demo/**/*.cs"
-  - "README.md"
-  - "docs/**/*.md"
+  - "**/*.cs"
+  - "**/*.csproj"
 ---
 
 # Use Dekori
 
-Apply this skill when working in the Dekori repository.
+Apply this skill when a .NET application uses **Dekori as a NuGet package**.
 
-## Repository map
+Assume the consuming app does **not** have Dekori source code, tests, or demo files checked in.
 
-- `src/Dekori/` — library code
-- `tests/Dekori.Tests/` — BDD specifications and test support types
-- `samples/Dekori.Demo/` — console demo that surfaces telemetry
-- `docs/` — DocFX documentation
+## Integration checklist
 
-## Required conventions
+1. Add the package: `dotnet add package Dekori`
+2. Register Dekori once during startup with `services.AddDekori()`
+3. Register instrumented services with `services.AddInstrumented<TInterface, TImplementation>()` when possible
+4. Decorate service classes or methods with Dekori attributes such as `[Instrument]`, `[Trace]`, `[Metric]`, `[CaptureException]`, and `[LogCall]`
+5. Wire OpenTelemetry to the same source and meter names configured in `DekoriOptions`
 
-- Read and follow `CLAUDE.md`.
-- Keep changes small and simple.
-- In C#, use file-scoped namespaces, one top-level type per file, and braces on every `if`, `else`, `for`, `foreach`, and `while`.
-- Public APIs in `src/Dekori/` need XML doc comments.
-- For behavioural changes, add or update a BDD-style spec first.
+## Service registration guidance
 
-## Testing and validation
+- Prefer `AddInstrumented<TInterface, TImplementation>()` so all interface members are interceptable.
+- Use `AddInstrumented<T>()` only when the caller must resolve the concrete type; only `virtual` and `abstract` members are intercepted in that mode.
+- Resolve the instrumented service from dependency injection. Constructing the implementation manually bypasses Dekori.
+- Call `AddDekori(options => ...)` to customize names such as `ActivitySourceName`, `MeterName`, `DefaultMetricName`, and `DefaultLogLevel`.
 
-- Build with `dotnet build`.
-- Run specs with `dotnet test`.
-- For behavioural telemetry changes, run `dotnet run --project samples/Dekori.Demo` and confirm the expected spans, metrics, and logs appear.
+## Attribute guidance
 
-## Important implementation areas
+- `[Instrument]` is the class-level convenience option for trace + metric + exception capture on each method.
+- `[Trace]` starts an `Activity`; use it when naming, parenting, linking, or root-span behavior needs to be explicit.
+- `[Metric]` records invocation count and duration; the error counter is used with `[CaptureException]`.
+- `[CaptureException]` logs, annotates telemetry, increments the error counter, and rethrows.
+- `[LogCall]` adds entry/exit logs and supports optional argument/result logging.
+- `[NoInstrument]` opts a single method out of class-level instrumentation.
+- Keep argument and return-value capture disabled unless the values are safe to emit.
 
-- `src/Dekori/DekoriInterceptor.cs` — runtime interception pipeline
-- `src/Dekori/Instrumentation/InstrumentationPlanCache.cs` — attribute resolution and cached plans
-- `src/Dekori/Instrumentation/InstrumentationPlan.cs` — resolved plan model
-- `tests/Dekori.Tests/Support/TelemetryProbe.cs` — in-process telemetry capture
-- `tests/Dekori.Tests/Support/TestHost.cs` — isolated test host setup
+## OpenTelemetry wiring reminders
+
+- Subscribe tracing to Dekori's configured activity source name with `AddSource(...)`.
+- Subscribe metrics to Dekori's configured meter name with `AddMeter(...)`.
+- If `[Trace(Source = "...")]` uses extra source names, add them to `DekoriOptions.AdditionalActivitySourceNames` and to OpenTelemetry tracing configuration.
+- Logging flows through the normal `ILogger` pipeline; configure logging exporters separately if needed.
+
+## Consumer-focused assumptions
+
+- Do not reference Dekori repository paths like `src/Dekori/` or `samples/Dekori.Demo/` in suggestions.
+- Do not ask the user to edit Dekori internals when the task is about using the package.
+- Prefer showing how to configure the consumer's host, DI registrations, service interfaces, and attributes.
